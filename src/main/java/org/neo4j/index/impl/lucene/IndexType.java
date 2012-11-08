@@ -19,33 +19,36 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import static java.lang.Boolean.FALSE;
-import static java.lang.Boolean.TRUE;
-import static org.neo4j.index.impl.lucene.LuceneIndexImplementation.KEY_TO_LOWER_CASE;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.DoubleField;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.Field.Index;
+import org.apache.lucene.document.Field.Store;
+import org.apache.lucene.document.FloatField;
+import org.apache.lucene.document.IntField;
+import org.apache.lucene.document.LongField;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.similarities.Similarity;
+import org.neo4j.index.lucene.QueryContext;
+import org.neo4j.index.lucene.ValueContext;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Field.Index;
-import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.document.Fieldable;
-import org.apache.lucene.document.NumericField;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.BooleanClause.Occur;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.Similarity;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.util.Version;
-import org.neo4j.index.lucene.QueryContext;
-import org.neo4j.index.lucene.ValueContext;
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
+import static org.neo4j.index.impl.lucene.LuceneIndexImplementation.KEY_TO_LOWER_CASE;
 
 abstract class IndexType
 {
@@ -145,7 +148,7 @@ abstract class IndexType
         {
             // TODO We should honor ValueContext instead of doing value.toString() here.
             // if changing it, also change #get to honor ValueContext.
-            document.add( new Field( exactKey( key ), value.toString(), Store.YES, Index.NOT_ANALYZED ) );
+            document.add( new StringField( exactKey( key ), value.toString(), Store.YES ) );
             document.add( instantiateField( key, value, Index.ANALYZED ) );
         }
         
@@ -288,7 +291,7 @@ abstract class IndexType
             return (Query) value;
         }
         
-        QueryParser parser = new QueryParser( Version.LUCENE_30, keyOrNull, analyzer );
+        QueryParser parser = new QueryParser( LuceneDataSource.LUCENE_VERSION, keyOrNull, analyzer );
         parser.setAllowLeadingWildcard( true );
         parser.setLowercaseExpandedTerms( toLowerCase );
         if ( contextOrNull != null && contextOrNull.getDefaultOperator() != null )
@@ -307,28 +310,28 @@ abstract class IndexType
     
     abstract void addToDocument( Document document, String key, Object value );
     
-    Fieldable instantiateField( String key, Object value, Index analyzed )
+    IndexableField instantiateField( String key, Object value, Index analyzed )
     {
-        Fieldable field = null;
+        IndexableField field = null;
         if ( value instanceof Number )
         {
             Number number = (Number) value;
-            NumericField numberField = new NumericField( key, Store.YES, true );
+            final IndexableField numberField;
             if ( value instanceof Long )
             {
-                numberField.setLongValue( number.longValue() );
+                numberField = new LongField( key, number.longValue(), Store.YES );
             }
             else if ( value instanceof Float )
             {
-                numberField.setFloatValue( number.floatValue() );
+                numberField = new FloatField( key, number.floatValue(), Store.YES );
             }
             else if ( value instanceof Double )
             {
-                numberField.setDoubleValue( number.doubleValue() );
+                numberField = new DoubleField( key, number.doubleValue(), Store.YES );
             }
             else
             {
-                numberField.setIntValue( number.intValue() );
+                numberField = new IntField( key, number.intValue(), Store.YES );
             }
             field = numberField;
         }
@@ -356,7 +359,7 @@ abstract class IndexType
     private void clearDocument( Document document )
     {
         Set<String> names = new HashSet<String>();
-        for ( Fieldable field : document.getFields() )
+        for ( IndexableField field : document.getFields() )
         {
             names.add( field.name() );
         }
@@ -370,8 +373,7 @@ abstract class IndexType
     static Document newBaseDocument( long entityId )
     {
         Document doc = new Document();
-        doc.add( new Field( LuceneIndex.KEY_DOC_ID, "" + entityId, Store.YES,
-                Index.NOT_ANALYZED ) );
+        doc.add( new StringField( LuceneIndex.KEY_DOC_ID, "" + entityId, Store.YES ) );
         return doc;
     }
 

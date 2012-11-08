@@ -19,44 +19,28 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import static org.neo4j.index.impl.lucene.MultipleBackupDeletionPolicy.SNAPSHOT_ID;
-import static org.neo4j.kernel.impl.nioneo.store.NeoStore.versionStringToLong;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.KeywordAnalyzer;
-import org.apache.lucene.analysis.LowerCaseFilter;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.WhitespaceTokenizer;
+import org.apache.lucene.analysis.TokenFilter;
+import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
+import org.apache.lucene.analysis.core.LowerCaseFilter;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.document.Fieldable;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexCommit;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.SnapshotDeletionPolicy;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.Similarity;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TopFieldCollector;
+import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.RAMDirectory;
@@ -95,6 +79,24 @@ import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog;
 import org.neo4j.kernel.impl.transaction.xaframework.XaTransaction;
 import org.neo4j.kernel.impl.transaction.xaframework.XaTransactionFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.neo4j.index.impl.lucene.MultipleBackupDeletionPolicy.SNAPSHOT_ID;
+import static org.neo4j.kernel.impl.nioneo.store.NeoStore.versionStringToLong;
+
 /**
  * An {@link XaDataSource} optimized for the {@link LuceneIndexImplementation}.
  * This class is public because the XA framework requires it.
@@ -116,10 +118,10 @@ public class LuceneDataSource extends LogBackedXaDataSource
         public static final GraphDatabaseSetting.StringSetting store_dir = NeoStoreXaDataSource.Configuration.store_dir;
     }
 
-    public static final Version LUCENE_VERSION = Version.LUCENE_35;
+    public static final Version LUCENE_VERSION = Version.LUCENE_40;
     public static final String DEFAULT_NAME = "lucene-index";
     public static final byte[] DEFAULT_BRANCH_ID = UTF8.encode( "162374" );
-    public static final long INDEX_VERSION = versionStringToLong( "3.5" );
+    public static final long INDEX_VERSION = versionStringToLong( "4.0" );
 
     /**
      * Default {@link Analyzer} for fulltext parsing.
@@ -128,9 +130,12 @@ public class LuceneDataSource extends LogBackedXaDataSource
         new Analyzer()
     {
         @Override
-        public TokenStream tokenStream( String fieldName, Reader reader )
+        protected TokenStreamComponents createComponents( String fieldName, Reader reader )
         {
-            return new LowerCaseFilter( LUCENE_VERSION, new WhitespaceTokenizer( LUCENE_VERSION, reader ) );
+            Tokenizer source = new WhitespaceTokenizer( LUCENE_VERSION, reader );
+            TokenFilter filter = new LowerCaseFilter( LUCENE_VERSION, source );
+
+            return new TokenStreamComponents( source, filter );
         }
 
         @Override
@@ -143,9 +148,9 @@ public class LuceneDataSource extends LogBackedXaDataSource
     public static final Analyzer WHITESPACE_ANALYZER = new Analyzer()
     {
         @Override
-        public TokenStream tokenStream( String fieldName, Reader reader )
+        protected TokenStreamComponents createComponents( String fieldName, Reader reader )
         {
-            return new WhitespaceTokenizer( LUCENE_VERSION, reader );
+            return new TokenStreamComponents(new WhitespaceTokenizer( LUCENE_VERSION, reader ));
         }
 
         @Override
@@ -229,10 +234,8 @@ public class LuceneDataSource extends LogBackedXaDataSource
             {
                 RelationshipId relId = (RelationshipId) entityId;
                 Document doc = IndexType.newBaseDocument( relId.id );
-                doc.add( new Field( LuceneIndex.KEY_START_NODE_ID, "" + relId.startNode,
-                        Store.YES, org.apache.lucene.document.Field.Index.NOT_ANALYZED ) );
-                doc.add( new Field( LuceneIndex.KEY_END_NODE_ID, "" + relId.endNode,
-                        Store.YES, org.apache.lucene.document.Field.Index.NOT_ANALYZED ) );
+                doc.add( new StringField( LuceneIndex.KEY_START_NODE_ID, "" + relId.startNode, Store.YES) );
+                doc.add( new StringField( LuceneIndex.KEY_END_NODE_ID, "" + relId.endNode, Store.YES) );
                 return doc;
             }
 
@@ -502,8 +505,8 @@ public class LuceneDataSource extends LogBackedXaDataSource
      * If nothing has changed underneath (since the searcher was last created
      * or refreshed) {@code searcher} is returned. But if something has changed a
      * refreshed searcher is returned. It makes use if the
-     * {@link IndexReader#openIfChanged(IndexReader, IndexWriter, boolean)} which faster than opening an index from
-     * scratch.
+     * {@link DirectoryReader#openIfChanged(DirectoryReader, IndexWriter, boolean)} which faster than opening an index
+     * from scratch.
      *
      * @param searcher the {@link IndexSearcher} to refresh.
      * @return a refreshed version of the searcher or, if nothing has changed,
@@ -514,9 +517,9 @@ public class LuceneDataSource extends LogBackedXaDataSource
     {
         try
         {
-            IndexReader reader = searcher.getSearcher().getIndexReader();
+            DirectoryReader reader = (DirectoryReader) searcher.getSearcher().getIndexReader();
             IndexWriter writer = searcher.getWriter();
-            IndexReader reopened = IndexReader.openIfChanged( reader, writer, true );
+            DirectoryReader reopened = DirectoryReader.openIfChanged( reader, writer, true );
             if ( reopened != null )
             {
                 IndexSearcher newSearcher = new IndexSearcher( reopened );
@@ -608,7 +611,7 @@ public class LuceneDataSource extends LogBackedXaDataSource
             if ( searcher == null )
             {
                 IndexWriter writer = newIndexWriter( identifier );
-                IndexReader reader = IndexReader.open( writer, true );
+                IndexReader reader = DirectoryReader.open( writer, true );
                 IndexSearcher indexSearcher = new IndexSearcher( reader );
                 searcher = new IndexReference( identifier, indexSearcher, writer );
                 indexSearchers.put( identifier, searcher );
@@ -754,8 +757,8 @@ public class LuceneDataSource extends LogBackedXaDataSource
 
     static boolean documentIsEmpty( Document document )
     {
-        List<Fieldable> fields = document.getFields();
-        for ( Fieldable field : fields )
+        List<IndexableField> fields = document.getFields();
+        for ( IndexableField field : fields )
         {
             if ( !LuceneIndex.KEY_DOC_ID.equals( field.name() ) )
             {

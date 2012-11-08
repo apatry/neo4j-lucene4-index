@@ -20,8 +20,6 @@
 
 package org.neo4j.index.lucene;
 
-import javax.transaction.TransactionManager;
-
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.index.IndexProviders;
 import org.neo4j.index.impl.lucene.LuceneIndexImplementation;
@@ -32,6 +30,8 @@ import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.transaction.xaframework.XaFactory;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+
+import javax.transaction.TransactionManager;
 
 public class LuceneKernelExtensionFactory extends KernelExtensionFactory<LuceneKernelExtensionFactory.Dependencies>
 {

@@ -19,12 +19,6 @@
  */
 package org.neo4j.index.lucene;
 
-import static java.lang.Long.MAX_VALUE;
-import static org.apache.lucene.search.NumericRangeQuery.newLongRange;
-import static org.neo4j.index.lucene.ValueContext.numeric;
-
-import java.util.Map;
-
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -32,6 +26,12 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
+
+import java.util.Map;
+
+import static java.lang.Long.MAX_VALUE;
+import static org.apache.lucene.search.NumericRangeQuery.newLongRange;
+import static org.neo4j.index.lucene.ValueContext.numeric;
 
 public class LuceneTimeline<T extends PropertyContainer> implements TimelineIndex<T>
 {
@@ -73,7 +73,7 @@ public class LuceneTimeline<T extends PropertyContainer> implements TimelineInde
     
     private QueryContext sort( QueryContext query, boolean reversed )
     {
-        return query.sort( new Sort( new SortField( FIELD, SortField.LONG, reversed ) ) );
+        return query.sort( new Sort( new SortField( FIELD, SortField.Type.LONG, reversed ) ) );
     }
     
     @Override

@@ -19,10 +19,6 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import java.io.IOException;
-import java.util.ConcurrentModificationException;
-import java.util.Vector;
-
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.search.Filter;
@@ -32,7 +28,10 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TopFieldCollector;
-import org.apache.lucene.search.Weight;
+
+import java.io.IOException;
+import java.util.ConcurrentModificationException;
+import java.util.Vector;
 
 /** A ranked list of documents, used to hold search results.
  * <p>
@@ -64,7 +63,7 @@ import org.apache.lucene.search.Weight;
 // used for iterating over all the hits from a query result, not just the N
 // top docs.
 public final class Hits {
-  private Weight weight;
+  private Query query;
   private IndexSearcher searcher;
   private Filter filter = null;
   private Sort sort = null;
@@ -87,7 +86,7 @@ public final class Hits {
   public Hits(IndexSearcher s, Query q, Filter f) throws IOException
   {
     score = false;
-    weight = q.weight(s);
+    query = q;
     searcher = s;
     filter = f;
     nDeletions = countDeletions(s);
@@ -97,7 +96,7 @@ public final class Hits {
 
   public Hits(IndexSearcher s, Query q, Filter f, Sort o, boolean score) throws IOException {
     this.score = score;
-    weight = q.weight(s);
+    query = q;
     searcher = s;
     filter = f;
     sort = o;
@@ -110,7 +109,7 @@ public final class Hits {
   private int countDeletions(IndexSearcher s) throws IOException {
     int cnt = -1;
     if (s instanceof IndexSearcher) {
-      cnt = s.maxDoc() - ((IndexSearcher) s).getIndexReader().numDocs();
+      cnt = s.getIndexReader().maxDoc() - ((IndexSearcher) s).getIndexReader().numDocs();
     }
     return cnt;
   }
@@ -129,19 +128,19 @@ public final class Hits {
     TopDocs topDocs = null;
     if ( sort == null )
     {
-        topDocs = searcher.search( weight, filter, n );
+        topDocs = searcher.search( query, filter, n );
     }
     else
     {
         if ( this.score )
         {
             TopFieldCollector collector = LuceneDataSource.scoringCollector( sort, n );
-            searcher.search( weight, null, collector );
+            searcher.search( query, null, collector );
             topDocs = collector.topDocs();
         }
         else
         {
-            topDocs = searcher.search( weight, filter, n, sort );
+            topDocs = searcher.search( query, filter, n, sort );
         }
     }
             

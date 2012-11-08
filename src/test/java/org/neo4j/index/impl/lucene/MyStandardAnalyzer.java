@@ -19,27 +19,45 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import java.io.Reader;
-import java.util.Arrays;
-import java.util.HashSet;
-
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.LowerCaseFilter;
+import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.util.Version;
+import org.apache.lucene.analysis.standard.StandardFilter;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
+import org.apache.lucene.analysis.util.CharArraySet;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.util.Arrays;
 
 public final class MyStandardAnalyzer extends Analyzer
 {
-    private final Analyzer actual;
-    
+    private final StandardAnalyzer actual;
+
     public MyStandardAnalyzer()
     {
-        actual = new StandardAnalyzer( Version.LUCENE_31, new HashSet<String>( Arrays.asList( "just", "some", "words" ) ) );
+        CharArraySet stopwords = new CharArraySet( LuceneDataSource.LUCENE_VERSION,
+                Arrays.asList( "just", "some", "words" ), true );
+        actual = new StandardAnalyzer( LuceneDataSource.LUCENE_VERSION, stopwords);
     }
 
     @Override
-    public TokenStream tokenStream( String fieldName, Reader reader )
+    protected TokenStreamComponents createComponents(String fieldName, Reader reader)
     {
-        return actual.tokenStream( fieldName, reader );
+        // copied from StandardAnalyzer#createComponents (we cannot call it directly, because it is protected)
+        final StandardTokenizer src = new StandardTokenizer(LuceneDataSource.LUCENE_VERSION, reader);
+        src.setMaxTokenLength(actual.getMaxTokenLength());
+        TokenStream tok = new StandardFilter(LuceneDataSource.LUCENE_VERSION, src);
+        tok = new LowerCaseFilter(LuceneDataSource.LUCENE_VERSION, tok);
+        tok = new StopFilter(LuceneDataSource.LUCENE_VERSION, tok, this.actual.getStopwordSet());
+        return new TokenStreamComponents(src, tok) {
+            @Override
+            protected void setReader(final Reader reader) throws IOException {
+                src.setMaxTokenLength(actual.getMaxTokenLength());
+                super.setReader(reader);
+            }
+        };
     }
 }

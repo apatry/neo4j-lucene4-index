@@ -19,39 +19,14 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import static org.apache.lucene.search.NumericRangeQuery.newIntRange;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.index.Neo4jTestCase.assertContains;
-import static org.neo4j.index.Neo4jTestCase.assertContainsInOrder;
-import static org.neo4j.index.impl.lucene.Contains.contains;
-import static org.neo4j.index.impl.lucene.IsEmpty.isEmpty;
-import static org.neo4j.index.lucene.QueryContext.numericRange;
-import static org.neo4j.index.lucene.ValueContext.numeric;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queryParser.QueryParser.Operator;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.similarities.DefaultSimilarity;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.Direction;
@@ -72,6 +47,31 @@ import org.neo4j.index.lucene.QueryContext;
 import org.neo4j.index.lucene.ValueContext;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.test.ImpermanentGraphDatabase;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.apache.lucene.search.NumericRangeQuery.newIntRange;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.index.Neo4jTestCase.assertContains;
+import static org.neo4j.index.Neo4jTestCase.assertContainsInOrder;
+import static org.neo4j.index.impl.lucene.Contains.contains;
+import static org.neo4j.index.impl.lucene.IsEmpty.isEmpty;
+import static org.neo4j.index.lucene.QueryContext.numericRange;
+import static org.neo4j.index.lucene.ValueContext.numeric;
 
 public class TestLuceneIndex extends AbstractLuceneIndexTest
 {
@@ -369,9 +369,9 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         for ( int i = 0; i < 2; i++ )
         {
             assertThat( index.query( "username:*@matrix AND sex:male" ), contains( neo ) );
-            assertThat( index.query( new QueryContext( "username:*@matrix sex:male" ).defaultOperator( Operator.AND ) ), contains( neo ) );
+            assertThat( index.query( new QueryContext( "username:*@matrix sex:male" ).defaultOperator( QueryParser.Operator.AND ) ), contains( neo ) );
             assertThat( index.query( "username:*@matrix OR sex:male" ), contains( neo, trinity ) );
-            assertThat( index.query( new QueryContext( "username:*@matrix sex:male" ).defaultOperator( Operator.OR ) ), contains( neo, trinity ) );
+            assertThat( index.query( new QueryContext( "username:*@matrix sex:male" ).defaultOperator( QueryParser.Operator.OR ) ), contains( neo, trinity ) );
 
             restartTx();
         }

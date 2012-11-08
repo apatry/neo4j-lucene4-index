@@ -19,12 +19,12 @@
  */
 package org.neo4j.index.impl.lucene;
 
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.search.IndexSearcher;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.search.IndexSearcher;
 
 class IndexReference
 {
@@ -76,7 +76,6 @@ class IndexReference
     {
         if ( !searcherIsClosed )
         {
-            searcher.close();
             searcher.getIndexReader().close();
             searcherIsClosed = true;
         }

@@ -4,27 +4,27 @@
     <groupId>org.neo4j.build</groupId>
     <artifactId>parent-central</artifactId>
     <version>35</version>
-    <relativePath />
   </parent>
-  <groupId>org.neo4j</groupId>
-  <artifactId>neo4j-lucene-index</artifactId>
-  <version>1.9.M01</version>
+  <groupId>com.keatext</groupId>
+  <artifactId>neo4j-lucene4-index</artifactId>
+  <version>1.9.M01-SNAPSHOT</version>
   <name>Neo4j - Lucene Index</name>
   <description>
-Integration layer between Neo4j and Lucene, providing one possible implementation of the Index API.
+Integration layer between Neo4j and Lucene v4, providing one possible implementation of the Index API.
   </description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <properties>
     <lucene.groupId>org.apache.lucene</lucene.groupId>
     <lucene.artifactId>lucene-core</lucene.artifactId>
-    <lucene.version>3.5.0</lucene.version>
-    <lucene.main.version>3.5.0</lucene.main.version>
+    <lucene.version>4.0.0</lucene.version>
+    <lucene.main.version>4.0.0</lucene.main.version>
     <bundle.namespace>org.neo4j.index</bundle.namespace>
     <short-name>lucene-index</short-name>
     <license-text.header>GPL-3-header.txt</license-text.header>
     <docs-plugin.filter>true</docs-plugin.filter>
     <docs.url>http://docs.neo4j.org/chunked/${project.version}/indexing.html</docs.url>
+    <neo4j.version>1.9.M01</neo4j.version>
   </properties>
 
   <packaging>jar</packaging>
@@ -57,12 +57,12 @@ the relevant Commercial Agreement.
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-kernel</artifactId>
-      <version>${project.version}</version>
+      <version>${neo4j.version}</version>
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-kernel</artifactId>
-      <version>${project.version}</version>
+      <version>${neo4j.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -72,9 +72,20 @@ the relevant Commercial Agreement.
       <version>${lucene.version}</version>
     </dependency>
     <dependency>
+      <groupId>${lucene.groupId}</groupId>
+      <artifactId>lucene-analyzers-common</artifactId>
+      <version>${lucene.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${lucene.groupId}</groupId>
+      <artifactId>lucene-queryparser</artifactId>
+      <version>${lucene.version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-graphviz</artifactId>
-      <version>${project.version}</version>
+      <version>${neo4j.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

@@ -19,21 +19,8 @@
  */
 package examples;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queryParser.QueryParser.Operator;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.WildcardQuery;
 import org.junit.After;
@@ -67,6 +54,19 @@ import org.neo4j.unsafe.batchinsert.BatchInserterIndex;
 import org.neo4j.unsafe.batchinsert.BatchInserterIndexProvider;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 import org.neo4j.visualization.asciidoc.AsciidocHelper;
+
+import java.io.File;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class ImdbExampleTest
 {
@@ -488,7 +488,7 @@ public class ImdbExampleTest
 
         // START SNIPPET: defaultOperator
         QueryContext query = new QueryContext( "title:*Matrix* year:1999" )
-                .defaultOperator( Operator.AND );
+                .defaultOperator( QueryParser.Operator.AND );
         hits = movies.query( query );
         // END SNIPPET: defaultOperator
         // with OR the result would be 2 hits

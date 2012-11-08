@@ -19,23 +19,12 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import static org.neo4j.index.impl.lucene.LuceneDataSource.LUCENE_VERSION;
-import static org.neo4j.index.impl.lucene.LuceneDataSource.getDirectory;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
@@ -45,6 +34,17 @@ import org.neo4j.helpers.Pair;
 import org.neo4j.index.lucene.ValueContext;
 import org.neo4j.kernel.impl.cache.LruCache;
 import org.neo4j.kernel.impl.util.IoPrimitiveUtils;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
+import static org.neo4j.index.impl.lucene.LuceneDataSource.LUCENE_VERSION;
+import static org.neo4j.index.impl.lucene.LuceneDataSource.getDirectory;
 
 class LuceneBatchInserterIndex implements BatchInserterIndex,
         org.neo4j.unsafe.batchinsert.BatchInserterIndex
@@ -201,7 +201,7 @@ class LuceneBatchInserterIndex implements BatchInserterIndex,
         if ( docs.totalHits > 0 )
         {
             Document document = searcher.doc( docs.scoreDocs[0].doc );
-            for ( Fieldable field : document.getFields() )
+            for ( IndexableField field : document.getFields() )
             {
                 String key = field.name();
                 Object value = field.stringValue();
@@ -273,7 +273,6 @@ class LuceneBatchInserterIndex implements BatchInserterIndex,
                 if ( result != null )
                 {
                     result.getIndexReader().close();
-                    result.close();
                 }
                 IndexReader newReader = IndexReader.open( writer, true );
                 result = new IndexSearcher( newReader );
@@ -295,15 +294,7 @@ class LuceneBatchInserterIndex implements BatchInserterIndex,
     {
         try
         {
-            if ( this.writer != null )
-            {
-                this.writer.optimize( true );
-            }
             LuceneUtil.close( this.writer );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
         }
         finally
         {

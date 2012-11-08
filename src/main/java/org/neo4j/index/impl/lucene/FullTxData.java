@@ -20,22 +20,10 @@
 package org.neo4j.index.impl.lucene;
 
 import static java.util.Collections.emptyList;
-import static org.neo4j.index.impl.lucene.LuceneDataSource.LUCENE_VERSION;
-import static org.neo4j.index.impl.lucene.LuceneIndex.KEY_DOC_ID;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -51,7 +39,18 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
+import static org.neo4j.index.impl.lucene.LuceneDataSource.LUCENE_VERSION;
+import static org.neo4j.index.impl.lucene.LuceneIndex.KEY_DOC_ID;
 import org.neo4j.index.lucene.QueryContext;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 class FullTxData extends TxData
 {
@@ -61,7 +60,7 @@ class FullTxData extends TxData
     private Directory directory;
     private IndexWriter writer;
     private boolean modified;
-    private IndexReader reader;
+    private DirectoryReader reader;
     private IndexSearcher searcher;
     private final Map<Long, Document> cachedDocuments = new HashMap<Long, Document>();
     private Set<String> orphans;
@@ -90,13 +89,13 @@ class FullTxData extends TxData
             if ( key == null && value == null )
             {
                 // Set a special "always hit" flag
-                document.add( new Field( ORPHANS_KEY, ORPHANS_VALUE, Store.NO, Index.NOT_ANALYZED ) );
+                document.add( new StringField( ORPHANS_KEY, ORPHANS_VALUE, Store.NO ) );
                 addOrphan( null );
             }
             else if ( value == null )
             {
                 // Set a special "always hit" flag
-                document.add( new Field( ORPHANS_KEY, key, Store.NO, Index.NOT_ANALYZED ) );
+                document.add( new StringField( ORPHANS_KEY, key, Store.NO ) );
                 addOrphan( key );
             }
             else
@@ -345,10 +344,19 @@ class FullTxData extends TxData
 
         try
         {
-            IndexReader newReader = this.reader == null ? IndexReader.open( this.writer, true ) : this.reader.reopen();
-            if ( newReader == this.reader )
+            DirectoryReader newReader;
+
+            if( this.reader == null )
             {
-                return this.searcher;
+                newReader = DirectoryReader.open( this.writer, true );
+            }
+            else
+            {
+                newReader = DirectoryReader.openIfChanged( this.reader );
+                if( newReader == null )
+                {
+                    return this.searcher;
+                }
             }
             safeClose( reader );
             this.reader = newReader;
@@ -384,7 +392,7 @@ class FullTxData extends TxData
             }
             else if ( object instanceof IndexSearcher )
             {
-                ( ( IndexSearcher ) object ).close();
+                // nothing to do since version 4 of lucene
             }
             else if ( object instanceof IndexReader )
             {

@@ -19,7 +19,7 @@
  */
 package org.neo4j.index.lucene;
 
-import org.apache.lucene.queryParser.QueryParser.Operator;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.Sort;
@@ -39,7 +39,7 @@ public class QueryContext
 {
     private final Object queryOrQueryObject;
     private Sort sorting;
-    private Operator defaultOperator;
+    private QueryParser.Operator defaultOperator;
     private boolean tradeCorrectnessForSpeed;
     private int topHits;
     
@@ -77,7 +77,7 @@ public class QueryContext
      */
     public QueryContext sort( String key, String... additionalKeys )
     {
-        SortField firstSortField = new SortField( key, SortField.STRING );
+        SortField firstSortField = new SortField( key, SortField.Type.STRING );
         if ( additionalKeys.length == 0 )
         {
             return sort( new Sort( firstSortField ) );
@@ -87,7 +87,7 @@ public class QueryContext
         sortFields[0] = firstSortField;
         for ( int i = 0; i < additionalKeys.length; i++ )
         {
-            sortFields[1+i] = new SortField( additionalKeys[i], SortField.STRING );
+            sortFields[1+i] = new SortField( additionalKeys[i], SortField.Type.STRING );
         }
         return sort( new Sort( sortFields ) );
     }
@@ -120,18 +120,18 @@ public class QueryContext
         
         Number number = ((NumericRangeQuery)queryOrQueryObject).getMin();
         number = number != null ? number : ((NumericRangeQuery)queryOrQueryObject).getMax();
-        int fieldType = SortField.INT;
+        SortField.Type fieldType = SortField.Type.INT;
         if ( number instanceof Long )
         {
-            fieldType = SortField.LONG;
+            fieldType = SortField.Type.LONG;
         }
         else if ( number instanceof Float )
         {
-            fieldType = SortField.FLOAT;
+            fieldType = SortField.Type.FLOAT;
         }
         else if ( number instanceof Double )
         {
-            fieldType = SortField.DOUBLE;
+            fieldType = SortField.Type.DOUBLE;
         }
         sort( new Sort( new SortField( key, fieldType, reversed ) ) );
         return this;
@@ -155,7 +155,7 @@ public class QueryContext
      * @param defaultOperator The new operator to use.
      * @return A QueryContext with the new default operator applied.
      */
-    public QueryContext defaultOperator( Operator defaultOperator )
+    public QueryContext defaultOperator( QueryParser.Operator defaultOperator )
     {
         this.defaultOperator = defaultOperator;
         return this;
@@ -164,10 +164,10 @@ public class QueryContext
     /**
      * Returns the default operator used between terms in compound queries.
      * 
-     * @return the default {@link Operator} specified with {@link #defaultOperator(Operator)}
+     * @return the default {@link QueryParser.Operator} specified with {@link #defaultOperator(Operator)}
      * or "OR" if none specified.
      */
-    public Operator getDefaultOperator()
+    public QueryParser.Operator getDefaultOperator()
     {
         return this.defaultOperator;
     }
