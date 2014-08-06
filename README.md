@@ -4,9 +4,10 @@ Lucene v4 Index Provider for Neo4j
 
 This project ports version 1.9.M01 of
 [neo4j-lucene-index](https://github.com/neo4j/community/tree/master/lucene-index)
-from Lucene 3.5 to Lucene 4. It has not been thoroughly tested yet, but it seems
-to work well. Once `neo4j-lucene4-index` is cloned and installed (`mvn
-install`), you can use it from maven with the following dependencies:
+from Lucene 3.5 to Lucene 4. It has not been thoroughly tested yet, but it
+seems to work well. Once `neo4j-lucene4-index` is cloned and installed (`mvn
+license:format install`), you can use it from maven with the following
+dependencies:
 
 ```xml
 <dependency>
